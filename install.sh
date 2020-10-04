@@ -154,9 +154,9 @@ else
 fi
 
 if [ "$pip_mirror" != "" ]; then
-    PIP_INSTALL="pip install -v -i $pip_mirror"
+    PIP_INSTALL="pip3 install -v --user -i $pip_mirror"
 else
-    PIP_INSTALL="pip install -v"
+    PIP_INSTALL="pip3 install -v --user"
 fi
 
 if [ ! -f $hostfile ]; then
@@ -183,25 +183,27 @@ if [ "$third_party_install" == "1" ]; then
         git checkout $apex_commit
     fi
 
-    python setup.py -v --cpp_ext --cuda_ext bdist_wheel
+    #python3 setup.py -v --cpp_ext --cuda_ext bdist_wheel
     cd -
 
     echo "Installing apex locally so that deepspeed will build"
-    $PIP_SUDO pip uninstall -y apex
-    $PIP_SUDO $PIP_INSTALL third_party/apex/dist/apex*.whl
+    #$PIP_SUDO pip3 uninstall -y apex
+    #$PIP_SUDO $PIP_INSTALL third_party/apex/dist/apex*.whl
+    $PIP_SUDO $PIP_INSTALL -v --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" third_party/apex/.
 fi
 if [ "$deepspeed_install" == "1" ]; then
     echo "Building deepspeed wheel"
-    python setup.py -v bdist_wheel
+    #python3 setup.py -v bdist_wheel
 fi
 
 if [ "$local_only" == "1" ]; then
     if [ "$deepspeed_install" == "1" ]; then
         echo "Installing deepspeed"
-        $PIP_SUDO pip uninstall -y deepspeed
-        $PIP_SUDO $PIP_INSTALL dist/deepspeed*.whl
+        #$PIP_SUDO pip3 uninstall -y deepspeed
+        #$PIP_SUDO $PIP_INSTALL dist/deepspeed*.whl
+	$PIP_SUDO $PIP_INSTALL -v .
 	# -I to exclude local directory files
-        python -I basic_install_test.py
+        python3 basic_install_test.py
         if [ $? == 0 ]; then
             echo "Installation is successful"
         else
@@ -225,18 +227,18 @@ else
        pdsh -w $hosts "$PIP_SUDO $PIP_INSTALL -r ${tmp_wheel_path}/requirements.txt"
     fi
     if [ "$third_party_install" == "1" ]; then
-        pdsh -w $hosts "$PIP_SUDO pip uninstall -y apex"
+        pdsh -w $hosts "$PIP_SUDO pip3 uninstall -y apex"
         pdcp -w $hosts third_party/apex/dist/apex*.whl $tmp_wheel_path/
         pdsh -w $hosts "$PIP_SUDO $PIP_INSTALL $tmp_wheel_path/apex*.whl"
-        pdsh -w $hosts 'python -c "import apex"'
+        pdsh -w $hosts 'python3 -c "import apex"'
     fi
     if [ "$deepspeed_install" == "1" ]; then
         echo "Installing deepspeed"
-        pdsh -w $hosts "$PIP_SUDO pip uninstall -y deepspeed"
+        pdsh -w $hosts "$PIP_SUDO pip3 uninstall -y deepspeed"
         pdcp -w $hosts dist/deepspeed*.whl $tmp_wheel_path/
         pdcp -w $hosts basic_install_test.py $tmp_wheel_path/
         pdsh -w $hosts "$PIP_SUDO $PIP_INSTALL $tmp_wheel_path/deepspeed*.whl"
-        pdsh -w $hosts "python $tmp_wheel_path/basic_install_test.py"
+        pdsh -w $hosts "python3 $tmp_wheel_path/basic_install_test.py"
         echo "Installation is successful"
     fi
     pdsh -w $hosts "if [ -d $tmp_wheel_path ]; then rm $tmp_wheel_path/*.whl $tmp_wheel_path/basic_install_test.py; rmdir $tmp_wheel_path; fi"
